@@ -1,0 +1,72 @@
+import requests
+from bs4 import BeautifulSoup
+import spacy
+from collections import Counter
+import re
+
+# Load the NLP model
+nlp = spacy.load("en_core_web_sm")
+
+def fetch_content(url):
+    """
+    Fetch content from a given URL and return the text.
+    """
+    try:
+        response = requests.get(url)
+        response.raise_for_status()
+        soup = BeautifulSoup(response.content, "html.parser")
+        # Extract main text from the web page
+        paragraphs = soup.find_all('p')
+        text = " ".join([p.get_text() for p in paragraphs])
+        return text
+    except Exception as e:
+        print(f"Error fetching content from {url}: {e}")
+        return ""
+
+def extract_key_phrases(text):
+    """
+    Extract key phrases from the text using NLP.
+    """
+    doc = nlp(text)
+    # Extract noun chunks and named entities
+    key_phrases = [chunk.text for chunk in doc.noun_chunks]
+    key_phrases.extend([ent.text for ent in doc.ents])
+    return key_phrases
+
+def find_commonalities(all_phrases):
+    """
+    Find common themes across all key phrases.
+    """
+    flat_phrases = [phrase.lower() for phrases in all_phrases for phrase in phrases]
+    counts = Counter(flat_phrases)
+    common_phrases = [phrase for phrase, count in counts.items() if count > 1]
+    return common_phrases
+
+def main():
+    # List of URLs to analyze
+    urls = [
+        "https://example.com/hedge-fund-1-newsletter",
+        "https://example.com/hedge-fund-2-blog",
+        "https://example.com/asset-management-1-report",
+        # Add more URLs as needed
+    ]
+    
+    all_key_phrases = []
+
+    for url in urls:
+        print(f"Fetching content from {url}")
+        content = fetch_content(url)
+        if content:
+            print(f"Analyzing content from {url}")
+            key_phrases = extract_key_phrases(content)
+            all_key_phrases.append(key_phrases)
+
+    # Find common themes
+    common_phrases = find_commonalities(all_key_phrases)
+    print("\nCommon themes across newsletters and blogs:")
+    for phrase in common_phrases:
+        print(f"- {phrase}")
+
+if __name__ == "__main__":
+    main()
+    
